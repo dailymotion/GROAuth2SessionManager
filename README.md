@@ -1,5 +1,7 @@
 # GROAuth2SessionManager
 
+WARNING: this is a fork that forces the use of digest to exchange client secret.
+
 GROAuth2SessionManager is an extension for [AFNetworking](http://github.com/AFNetworking/AFNetworking/) that greatly simplifies the process of authenticating against an [OAuth 2](http://oauth.net/2/) provider. It is based in the [AFOAuth2Client](https://github.com/AFNetworking/AFOAuth2Client), but with some changes to support AFNetworking 2.
 
 ## Example Usage

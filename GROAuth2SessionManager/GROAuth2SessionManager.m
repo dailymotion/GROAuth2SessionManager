@@ -138,7 +138,8 @@ NSString * const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperati
 - (void)authenticateUsingOAuthWithPath:(NSString *)path parameters:(NSDictionary *)parameters success:(void (^)(AFOAuthCredential *))success failure:(void (^)(NSError *))failure {
     NSMutableDictionary *mutableParameters = [NSMutableDictionary dictionaryWithDictionary:parameters];
     [mutableParameters setObject:[self clientID] forKey:@"client_id"];
-    [mutableParameters setValue:[self secret] forKey:@"client_secret"];
+    // We don't pass the client_secret in clean anymore, we use digest
+    //[mutableParameters setValue:[self secret] forKey:@"client_secret"];
 
     parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
 
@@ -156,9 +157,14 @@ NSString * const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperati
 
         return;
     }
+    [mutableRequest setValue:@"Digest" forHTTPHeaderField:@"Authorization"];
 
     AFHTTPRequestOperation *requestOperation = [[AFHTTPRequestOperation alloc] initWithRequest:mutableRequest];
     [requestOperation setResponseSerializer:[AFJSONResponseSerializer serializer]];
+    [requestOperation setCredential:[NSURLCredential credentialWithUser:[self clientID]
+                                                               password:[self secret]
+                                                            persistence:NSURLCredentialPersistenceNone]];
+   
     [requestOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
         if ([responseObject valueForKey:@"error"]) {
             if (failure) {
