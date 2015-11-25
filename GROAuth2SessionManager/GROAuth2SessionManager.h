@@ -21,10 +21,13 @@
 // THE SOFTWARE.
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_7_0
+
 #import "AFHTTPSessionManager.h"
+
 #else
 #import "AFHTTPRequestOperationManager.h"
 #endif
+
 #import "AFOAuthCredential.h"
 
 #ifndef _SECURITY_SECITEM_H_
@@ -37,6 +40,7 @@
  @see RFC 6749 The OAuth 2.0 Authorization Framework: http://tools.ietf.org/html/rfc6749
  */
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_7_0
+
 @interface GROAuth2SessionManager : AFHTTPSessionManager
 #else
 @interface GROAuth2SessionManager : AFHTTPRequestOperationManager
@@ -49,17 +53,17 @@
 /**
  The service provider identifier used to store and retrieve OAuth credentials by `AFOAuthCredential`. Equivalent to the hostname of the client `baseURL`.
  */
-@property (readonly, nonatomic) NSString *serviceProviderIdentifier;
+@property(readonly, nonatomic) NSString *serviceProviderIdentifier;
 
 /**
  The client identifier issued by the authorization server, uniquely representing the registration information provided by the client.
  */
-@property (readonly, nonatomic) NSString *clientID;
+@property(readonly, nonatomic) NSString *clientID;
 
 /**
  The OAuth URL if different than the base URL.
  */
-@property (readonly, nonatomic) NSURL *oAuthURL;
+@property(readonly, nonatomic) NSURL *oAuthURL;
 
 ///------------------------------------------------
 /// @name Creating and Initializing OAuth 2 Clients
@@ -189,4 +193,4 @@
 
  `kGROAuth2ErrorFailingOperationKey`: The failing AFHTTPRequestOperation object.
  */
-extern NSString * const kGROAuthErrorFailingOperationKey;
+extern NSString *const kGROAuthErrorFailingOperationKey;

@@ -34,22 +34,22 @@
 /**
  The OAuth access token.
  */
-@property (readonly, nonatomic) NSString *accessToken;
+@property(readonly, nonatomic) NSString *accessToken;
 
 /**
  The OAuth token type (e.g. "bearer").
  */
-@property (readonly, nonatomic) NSString *tokenType;
+@property(readonly, nonatomic) NSString *tokenType;
 
 /**
  The OAuth refresh token.
  */
-@property (readonly, nonatomic) NSString *refreshToken;
+@property(readonly, nonatomic) NSString *refreshToken;
 
 /**
  Whether the OAuth credentials are expired.
  */
-@property (readonly, nonatomic, assign, getter = isExpired) BOOL expired;
+@property(readonly, nonatomic, assign, getter = isExpired) BOOL expired;
 
 ///--------------------------------------------
 /// @name Creating and Initializing Credentials
@@ -91,6 +91,7 @@
 ///-----------------------------------------
 
 #ifdef _SECURITY_SECITEM_H_
+
 /**
  Stores the specified OAuth credential for a given web service identifier in the Keychain with the default Keychain Accessibilty of kSecAttrAccessibleWhenUnlocked and without iCloud support.
 
@@ -182,7 +183,7 @@
  `kAFOAuthPasswordCredentialsGrantType`: "password"
  `kAFOAuthRefreshGrantType`: "refresh_token"
  */
-extern NSString * const kAFOAuthCodeGrantType;
-extern NSString * const kAFOAuthClientCredentialsGrantType;
-extern NSString * const kAFOAuthPasswordCredentialsGrantType;
-extern NSString * const kAFOAuthRefreshGrantType;
+extern NSString *const kAFOAuthCodeGrantType;
+extern NSString *const kAFOAuthClientCredentialsGrantType;
+extern NSString *const kAFOAuthPasswordCredentialsGrantType;
+extern NSString *const kAFOAuthRefreshGrantType;

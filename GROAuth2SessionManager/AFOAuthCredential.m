@@ -23,22 +23,22 @@
 #import "AFOAuthCredential.h"
 
 #ifdef _SECURITY_SECITEM_H_
-NSString * const kAFOAuth2CredentialServiceName = @"AFOAuthCredentialService";
+NSString *const kAFOAuth2CredentialServiceName = @"AFOAuthCredentialService";
 
-static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *identifier) {
-    NSMutableDictionary *queryDictionary = [NSMutableDictionary dictionaryWithObjectsAndKeys:(__bridge id)kSecClassGenericPassword, kSecClass, kAFOAuth2CredentialServiceName, kSecAttrService, nil];
-    [queryDictionary setValue:identifier forKey:(__bridge id)kSecAttrAccount];
+static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *identifier) {
+  NSMutableDictionary *queryDictionary = [NSMutableDictionary dictionaryWithObjectsAndKeys:(__bridge id) kSecClassGenericPassword, kSecClass, kAFOAuth2CredentialServiceName, kSecAttrService, nil];
+  [queryDictionary setValue:identifier forKey:(__bridge id) kSecAttrAccount];
 
-    return queryDictionary;
+  return queryDictionary;
 }
 #endif
 
 
 @interface AFOAuthCredential ()
-@property (readwrite, nonatomic) NSString *accessToken;
-@property (readwrite, nonatomic) NSString *tokenType;
-@property (readwrite, nonatomic) NSString *refreshToken;
-@property (readwrite, nonatomic) NSDate *expiration;
+@property(readwrite, nonatomic) NSString *accessToken;
+@property(readwrite, nonatomic) NSString *tokenType;
+@property(readwrite, nonatomic) NSString *refreshToken;
+@property(readwrite, nonatomic) NSDate *expiration;
 @end
 
 @implementation AFOAuthCredential
@@ -51,42 +51,39 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
 #pragma mark -
 
 + (instancetype)credentialWithOAuthToken:(NSString *)token
-                               tokenType:(NSString *)type
-{
-    return [[self alloc] initWithOAuthToken:token tokenType:type];
+                               tokenType:(NSString *)type {
+  return [[self alloc] initWithOAuthToken:token tokenType:type];
 }
 
 - (id)initWithOAuthToken:(NSString *)token
-               tokenType:(NSString *)type
-{
-    self = [super init];
-    if (!self) {
-        return nil;
-    }
+               tokenType:(NSString *)type {
+  self = [super init];
+  if (!self) {
+    return nil;
+  }
 
-    self.accessToken = token;
-    self.tokenType = type;
+  self.accessToken = token;
+  self.tokenType = type;
 
-    return self;
+  return self;
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"<%@ accessToken:\"%@\" tokenType:\"%@\" refreshToken:\"%@\" expiration:\"%@\">", [self class], self.accessToken, self.tokenType, self.refreshToken, self.expiration];
+  return [NSString stringWithFormat:@"<%@ accessToken:\"%@\" tokenType:\"%@\" refreshToken:\"%@\" expiration:\"%@\">", [self class], self.accessToken, self.tokenType, self.refreshToken, self.expiration];
 }
 
 - (void)setRefreshToken:(NSString *)refreshToken
-             expiration:(NSDate *)expiration
-{
-    if (!refreshToken || !expiration) {
-        return;
-    }
+             expiration:(NSDate *)expiration {
+  if (!refreshToken || !expiration) {
+    return;
+  }
 
-    self.refreshToken = refreshToken;
-    self.expiration = expiration;
+  self.refreshToken = refreshToken;
+  self.expiration = expiration;
 }
 
 - (BOOL)isExpired {
-    return [self.expiration compare:[NSDate date]] == NSOrderedAscending;
+  return [self.expiration compare:[NSDate date]] == NSOrderedAscending;
 }
 
 #pragma mark Keychain
@@ -94,99 +91,100 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
 #ifdef _SECURITY_SECITEM_H_
 
 + (BOOL)storeCredential:(AFOAuthCredential *)credential withIdentifier:(NSString *)identifier {
-    return [self storeCredential:credential withIdentifier:identifier useICloud:NO];
+  return [self storeCredential:credential withIdentifier:identifier useICloud:NO];
 }
 
 + (BOOL)storeCredential:(AFOAuthCredential *)credential withIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
-    id securityAccessibility;
+  id securityAccessibility;
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 43000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090)
-    securityAccessibility = (__bridge id)kSecAttrAccessibleWhenUnlocked;
+  securityAccessibility = (__bridge id) kSecAttrAccessibleWhenUnlocked;
 #endif
-    return [self storeCredential:credential withIdentifier:identifier withAccessibility:securityAccessibility useICloud:shouldUseICloud];
+  return [self storeCredential:credential withIdentifier:identifier withAccessibility:securityAccessibility useICloud:shouldUseICloud];
 }
 
 + (BOOL)storeCredential:(AFOAuthCredential *)credential
          withIdentifier:(NSString *)identifier withAccessibility:(id)securityAccessibility useICloud:(BOOL)shouldUseICloud {
-    NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
 
-    if (!credential) {
-        return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud];
-    }
+  if (!credential) {
+    return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud];
+  }
 
-    NSMutableDictionary *updateDictionary = [NSMutableDictionary dictionary];
-    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:credential];
-    [updateDictionary setObject:data forKey:(__bridge id)kSecValueData];
-    if (securityAccessibility) {
-        [updateDictionary setObject:securityAccessibility forKey:(__bridge id)kSecAttrAccessible];
-    }
+  NSMutableDictionary *updateDictionary = [NSMutableDictionary dictionary];
+  NSData *data = [NSKeyedArchiver archivedDataWithRootObject:credential];
+  updateDictionary[(__bridge id) kSecValueData] = data;
+  if (securityAccessibility) {
+    updateDictionary[(__bridge id) kSecAttrAccessible] = securityAccessibility;
+  }
 
-    if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
-        [queryDictionary setObject:@YES forKey:(__bridge id)kSecAttrSynchronizable];
-        [updateDictionary setObject:@YES forKey:(__bridge id)kSecAttrSynchronizable];
-    }
+  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+    queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
+    updateDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
+  }
 
-    OSStatus status;
-    BOOL exists = ([self retrieveCredentialWithIdentifier:identifier] != nil);
+  OSStatus status;
+  BOOL exists = ([self retrieveCredentialWithIdentifier:identifier] != nil);
 
-    if (exists) {
-        status = SecItemUpdate((__bridge CFDictionaryRef)queryDictionary, (__bridge CFDictionaryRef)updateDictionary);
-    } else {
-        [queryDictionary addEntriesFromDictionary:updateDictionary];
-        status = SecItemAdd((__bridge CFDictionaryRef)queryDictionary, NULL);
-    }
+  if (exists) {
+    status = SecItemUpdate((__bridge CFDictionaryRef) queryDictionary, (__bridge CFDictionaryRef) updateDictionary);
+  }
+  else {
+    [queryDictionary addEntriesFromDictionary:updateDictionary];
+    status = SecItemAdd((__bridge CFDictionaryRef) queryDictionary, NULL);
+  }
 
-    if (status != errSecSuccess) {
-        NSLog(@"Unable to %@ credential with identifier \"%@\" (Error %li)", exists ? @"update" : @"add", identifier, (long int)status);
-    }
+  if (status != errSecSuccess) {
+    NSLog(@"Unable to %@ credential with identifier \"%@\" (Error %li)", exists ? @"update" : @"add", identifier, (long int) status);
+  }
 
-    return (status == errSecSuccess);
+  return (status == errSecSuccess);
 }
 
 + (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier {
-    return [self deleteCredentialWithIdentifier:identifier useICloud:NO];
+  return [self deleteCredentialWithIdentifier:identifier useICloud:NO];
 }
 
 + (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
-    NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
 
-    if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
-        [queryDictionary setObject:@YES forKey:(__bridge id)kSecAttrSynchronizable];
-    }
+  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+    queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
+  }
 
-    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)queryDictionary);
+  OSStatus status = SecItemDelete((__bridge CFDictionaryRef) queryDictionary);
 
-    if (status != errSecSuccess) {
-        NSLog(@"Unable to delete credential with identifier \"%@\" (Error %li)", identifier, (long int)status);
-    }
+  if (status != errSecSuccess) {
+    NSLog(@"Unable to delete credential with identifier \"%@\" (Error %li)", identifier, (long int) status);
+  }
 
-    return (status == errSecSuccess);
+  return (status == errSecSuccess);
 }
 
 + (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier {
-    return [self retrieveCredentialWithIdentifier:identifier useICloud:NO];
+  return [self retrieveCredentialWithIdentifier:identifier useICloud:NO];
 }
 
 + (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
-    NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
-    [queryDictionary setObject:(__bridge id)kCFBooleanTrue forKey:(__bridge id)kSecReturnData];
-    [queryDictionary setObject:(__bridge id)kSecMatchLimitOne forKey:(__bridge id)kSecMatchLimit];
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
+  queryDictionary[(__bridge id) kSecReturnData] = (__bridge id) kCFBooleanTrue;
+  queryDictionary[(__bridge id) kSecMatchLimit] = (__bridge id) kSecMatchLimitOne;
 
-    if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
-        [queryDictionary setObject:@YES forKey:(__bridge id)kSecAttrSynchronizable];
-    }
+  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+    queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
+  }
 
-    CFDataRef result = nil;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)queryDictionary, (CFTypeRef *)&result);
+  CFDataRef result = nil;
+  OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef) queryDictionary, (CFTypeRef *) &result);
 
-    if (status != errSecSuccess) {
-        NSLog(@"Unable to fetch credential with identifier \"%@\" (Error %li)", identifier, (long int)status);
-        return nil;
-    }
+  if (status != errSecSuccess) {
+    NSLog(@"Unable to fetch credential with identifier \"%@\" (Error %li)", identifier, (long int) status);
+    return nil;
+  }
 
-    NSData *data = (__bridge_transfer NSData *)result;
-    AFOAuthCredential *credential = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+  NSData *data = (__bridge_transfer NSData *) result;
+  AFOAuthCredential *credential = [NSKeyedUnarchiver unarchiveObjectWithData:data];
 
-    return credential;
+  return credential;
 }
 
 #endif
@@ -194,20 +192,20 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
 #pragma mark - NSCoding
 
 - (id)initWithCoder:(NSCoder *)decoder {
-    self = [super init];
-    self.accessToken = [decoder decodeObjectForKey:@"accessToken"];
-    self.tokenType = [decoder decodeObjectForKey:@"tokenType"];
-    self.refreshToken = [decoder decodeObjectForKey:@"refreshToken"];
-    self.expiration = [decoder decodeObjectForKey:@"expiration"];
+  self = [super init];
+  self.accessToken = [decoder decodeObjectForKey:@"accessToken"];
+  self.tokenType = [decoder decodeObjectForKey:@"tokenType"];
+  self.refreshToken = [decoder decodeObjectForKey:@"refreshToken"];
+  self.expiration = [decoder decodeObjectForKey:@"expiration"];
 
-    return self;
+  return self;
 }
 
 - (void)encodeWithCoder:(NSCoder *)encoder {
-    [encoder encodeObject:self.accessToken forKey:@"accessToken"];
-    [encoder encodeObject:self.tokenType forKey:@"tokenType"];
-    [encoder encodeObject:self.refreshToken forKey:@"refreshToken"];
-    [encoder encodeObject:self.expiration forKey:@"expiration"];
+  [encoder encodeObject:self.accessToken forKey:@"accessToken"];
+  [encoder encodeObject:self.tokenType forKey:@"tokenType"];
+  [encoder encodeObject:self.refreshToken forKey:@"refreshToken"];
+  [encoder encodeObject:self.expiration forKey:@"expiration"];
 }
 
 @end
