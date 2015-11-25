@@ -13,8 +13,8 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '6.0'
   s.osx.deployment_target = '10.9'
 
-  s.dependency 'AFNetworking', '~> 2.6'
-
+  s.dependency 'AFNetworking'
+  
   s.ios.frameworks = 'Security'
 
   s.prefix_header_contents = <<-EOS
