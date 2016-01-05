@@ -25,9 +25,18 @@
 #ifdef _SECURITY_SECITEM_H_
 NSString *const kAFOAuth2CredentialServiceName = @"AFOAuthCredentialService";
 
-static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *identifier) {
-  NSMutableDictionary *queryDictionary = [NSMutableDictionary dictionaryWithObjectsAndKeys:(__bridge id) kSecClassGenericPassword, kSecClass, kAFOAuth2CredentialServiceName, kSecAttrService, nil];
-  [queryDictionary setValue:identifier forKey:(__bridge id) kSecAttrAccount];
+static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *identifier, NSString *_Nullable accessGroup) {
+  NSCParameterAssert(identifier);
+
+  NSMutableDictionary *queryDictionary = [@{
+          (__bridge id) kSecClass : (__bridge id) kSecClassGenericPassword,
+          (__bridge id) kSecAttrService : kAFOAuth2CredentialServiceName,
+          (__bridge id) kSecAttrAccount : identifier
+  } mutableCopy];
+
+  if (accessGroup) {
+    queryDictionary[(__bridge id) kSecAttrAccessGroup] = accessGroup;
+  }
 
   return queryDictionary;
 }
@@ -69,7 +78,14 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
 }
 
 - (NSString *)description {
-  return [NSString stringWithFormat:@"<%@ accessToken:\"%@\" tokenType:\"%@\" refreshToken:\"%@\" expiration:\"%@\">", [self class], self.accessToken, self.tokenType, self.refreshToken, self.expiration];
+  NSMutableString *description = [NSMutableString stringWithFormat:@"<%@: ", NSStringFromClass([self class])];
+  [description appendFormat:@"self.accessToken=%@", self.accessToken];
+  [description appendFormat:@", self.tokenType=%@", self.tokenType];
+  [description appendFormat:@", self.refreshToken=%@", self.refreshToken];
+  [description appendFormat:@", self.expired=%d", self.expired];
+  [description appendFormat:@", self.expiration=%@", self.expiration];
+  [description appendString:@">"];
+  return description;
 }
 
 - (void)setRefreshToken:(NSString *)refreshToken
@@ -90,24 +106,36 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
 
 #ifdef _SECURITY_SECITEM_H_
 
-+ (BOOL)storeCredential:(AFOAuthCredential *)credential withIdentifier:(NSString *)identifier {
-  return [self storeCredential:credential withIdentifier:identifier useICloud:NO];
++ (BOOL)storeCredential:(AFOAuthCredential *)credential
+         withIdentifier:(NSString *)identifier
+            accessGroup:(NSString *)accessGroup {
+  return [self storeCredential:credential withIdentifier:identifier useICloud:NO accessGroup:accessGroup];
 }
 
-+ (BOOL)storeCredential:(AFOAuthCredential *)credential withIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
++ (BOOL)storeCredential:(AFOAuthCredential *)credential
+         withIdentifier:(NSString *)identifier
+              useICloud:(BOOL)shouldUseICloud
+            accessGroup:(NSString *)accessGroup {
   id securityAccessibility;
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 43000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090)
   securityAccessibility = (__bridge id) kSecAttrAccessibleWhenUnlocked;
 #endif
-  return [self storeCredential:credential withIdentifier:identifier withAccessibility:securityAccessibility useICloud:shouldUseICloud];
+  return [self storeCredential:credential
+                withIdentifier:identifier
+             withAccessibility:securityAccessibility
+                     useICloud:shouldUseICloud
+                   accessGroup:accessGroup];
 }
 
 + (BOOL)storeCredential:(AFOAuthCredential *)credential
-         withIdentifier:(NSString *)identifier withAccessibility:(id)securityAccessibility useICloud:(BOOL)shouldUseICloud {
-  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
+         withIdentifier:(NSString *)identifier
+      withAccessibility:(id)securityAccessibility
+              useICloud:(BOOL)shouldUseICloud
+            accessGroup:(NSString *)accessGroup {
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier, accessGroup);
 
   if (!credential) {
-    return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud];
+    return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud accessGroup:nil];
   }
 
   NSMutableDictionary *updateDictionary = [NSMutableDictionary dictionary];
@@ -117,13 +145,13 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
     updateDictionary[(__bridge id) kSecAttrAccessible] = securityAccessibility;
   }
 
-  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+  if (shouldUseICloud) {
     queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
     updateDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
   }
 
   OSStatus status;
-  BOOL exists = ([self retrieveCredentialWithIdentifier:identifier] != nil);
+  BOOL exists = ([self retrieveCredentialWithIdentifier:identifier accessGroup:nil] != nil);
 
   if (exists) {
     status = SecItemUpdate((__bridge CFDictionaryRef) queryDictionary, (__bridge CFDictionaryRef) updateDictionary);
@@ -140,14 +168,14 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
   return (status == errSecSuccess);
 }
 
-+ (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier {
-  return [self deleteCredentialWithIdentifier:identifier useICloud:NO];
++ (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier accessGroup:(NSString *)accessGroup {
+  return [self deleteCredentialWithIdentifier:identifier useICloud:NO accessGroup:accessGroup];
 }
 
-+ (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
-  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
++ (BOOL)deleteCredentialWithIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud accessGroup:(NSString *)accessGroup {
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier, accessGroup);
 
-  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+  if (shouldUseICloud) {
     queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
   }
 
@@ -160,16 +188,18 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
   return (status == errSecSuccess);
 }
 
-+ (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier {
-  return [self retrieveCredentialWithIdentifier:identifier useICloud:NO];
++ (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier accessGroup:(NSString *)accessGroup {
+  return [self retrieveCredentialWithIdentifier:identifier useICloud:NO accessGroup:accessGroup];
 }
 
-+ (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier useICloud:(BOOL)shouldUseICloud {
-  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier);
++ (AFOAuthCredential *)retrieveCredentialWithIdentifier:(NSString *)identifier
+                                              useICloud:(BOOL)shouldUseICloud
+                                            accessGroup:(NSString *)accessGroup {
+  NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier, accessGroup);
   queryDictionary[(__bridge id) kSecReturnData] = (__bridge id) kCFBooleanTrue;
   queryDictionary[(__bridge id) kSecMatchLimit] = (__bridge id) kSecMatchLimitOne;
 
-  if (shouldUseICloud && &kSecAttrSynchronizable != NULL) {
+  if (shouldUseICloud) {
     queryDictionary[(__bridge id) kSecAttrSynchronizable] = @YES;
   }
 

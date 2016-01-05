@@ -94,9 +94,9 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
 - (void)authenticateUsingOAuthWithPath:(NSString *)path username:(NSString *)username password:(NSString *)password scope:(NSString *)scope success:(void (^)(AFOAuthCredential *))success failure:(void (^)(NSError *))failure {
   NSMutableDictionary *mutableParameters = [NSMutableDictionary dictionary];
   mutableParameters[@"grant_type"] = kGROAuthPasswordCredentialsGrantType;
-  [mutableParameters setValue:username forKey:@"username"];
-  [mutableParameters setValue:password forKey:@"password"];
-  [mutableParameters setValue:scope forKey:@"scope"];
+  mutableParameters[@"username"] = username;
+  mutableParameters[@"password"] = password;
+  mutableParameters[@"scope"] = scope;
 
   NSDictionary *parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
 
@@ -106,7 +106,7 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
 - (void)authenticateUsingOAuthWithPath:(NSString *)path scope:(NSString *)scope success:(void (^)(AFOAuthCredential *))success failure:(void (^)(NSError *))failure {
   NSMutableDictionary *mutableParameters = [NSMutableDictionary dictionary];
   mutableParameters[@"grant_type"] = kGROAuthClientCredentialsGrantType;
-  [mutableParameters setValue:scope forKey:@"scope"];
+  mutableParameters[@"scope"] = scope;
 
   NSDictionary *parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
 
@@ -116,7 +116,7 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
 - (void)authenticateUsingOAuthWithPath:(NSString *)path refreshToken:(NSString *)refreshToken success:(void (^)(AFOAuthCredential *))success failure:(void (^)(NSError *))failure {
   NSMutableDictionary *mutableParameters = [NSMutableDictionary dictionary];
   mutableParameters[@"grant_type"] = kGROAuthRefreshGrantType;
-  [mutableParameters setValue:refreshToken forKey:@"refresh_token"];
+  mutableParameters[@"refresh_token"] = refreshToken;
 
   NSDictionary *parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
 
@@ -126,8 +126,8 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
 - (void)authenticateUsingOAuthWithPath:(NSString *)path code:(NSString *)code redirectURI:(NSString *)redirectURI success:(void (^)(AFOAuthCredential *))success failure:(void (^)(NSError *))failure {
   NSMutableDictionary *mutableParameters = [NSMutableDictionary dictionary];
   mutableParameters[@"grant_type"] = kGROAuthCodeGrantType;
-  [mutableParameters setValue:code forKey:@"code"];
-  [mutableParameters setValue:redirectURI forKey:@"redirect_uri"];
+  mutableParameters[@"code"] = code;
+  mutableParameters[@"redirect_uri"] = redirectURI;
 
   NSDictionary *parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
 
@@ -159,13 +159,15 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
   }
   [mutableRequest setValue:@"Digest" forHTTPHeaderField:@"Authorization"];
 
+  __weak typeof(self) weakSelf = self;
   NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
   AFURLSessionManager *manager = [[AFURLSessionManager alloc] initWithSessionConfiguration:configuration];
   [manager setSessionDidReceiveAuthenticationChallengeBlock:^NSURLSessionAuthChallengeDisposition(NSURLSession *session, NSURLAuthenticationChallenge *challenge, NSURLCredential **credential) {
     // TODO can check challenge count
-    NSURLCredential *urlCredential = [NSURLCredential credentialWithUser:[self clientID] password:[self secret]
-                                                             persistence:NSURLCredentialPersistenceNone];
+    NSURLCredential *urlCredential = [NSURLCredential credentialWithUser:weakSelf.clientID password:weakSelf.secret
+                                                             persistence:NSURLCredentialPersistenceForSession];
     [challenge.sender useCredential:urlCredential forAuthenticationChallenge:challenge];
+    *credential = urlCredential;
     return NSURLSessionAuthChallengeUseCredential;
   }];
 
@@ -178,7 +180,7 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
       failure(error);
     }
 
-    if ([responseObject valueForKey:@"error"]) {
+    if (responseObject[@"error"]) {
       if (failure) {
         // TODO: Resolve the `error` field into a proper NSError object
         // http://tools.ietf.org/html/rfc6749#section-5.2
@@ -187,16 +189,16 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
       return;
     }
 
-    NSString *refreshToken = [responseObject valueForKey:@"refresh_token"];
+    NSString *refreshToken = responseObject[@"refresh_token"];
     if (refreshToken == nil || [refreshToken isEqual:[NSNull null]]) {
-      refreshToken = [parameters valueForKey:@"refresh_token"];
+      refreshToken = parameters[@"refresh_token"];
     }
 
-    AFOAuthCredential *credential = [AFOAuthCredential credentialWithOAuthToken:[responseObject valueForKey:@"access_token"]
-                                                                      tokenType:[responseObject valueForKey:@"token_type"]];
+    AFOAuthCredential *credential = [AFOAuthCredential credentialWithOAuthToken:responseObject[@"access_token"]
+                                                                      tokenType:responseObject[@"token_type"]];
 
     NSDate *expireDate = [NSDate distantFuture];
-    id expiresIn = [responseObject valueForKey:@"expires_in"];
+    id expiresIn = responseObject[@"expires_in"];
     if (expiresIn != nil && ![expiresIn isEqual:[NSNull null]]) {
       expireDate = [NSDate dateWithTimeIntervalSinceNow:[expiresIn doubleValue]];
     }
