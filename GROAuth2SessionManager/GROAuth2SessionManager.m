@@ -178,6 +178,7 @@ NSString *const kGROAuthErrorFailingOperationKey = @"GROAuthErrorFailingOperatio
         error = [NSError errorWithDomain:error.domain code:error.code userInfo:userInfo];
       }
       failure(error);
+      return;
     }
 
     if (responseObject[@"error"]) {
