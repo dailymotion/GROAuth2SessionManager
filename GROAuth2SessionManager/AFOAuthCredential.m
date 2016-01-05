@@ -135,7 +135,7 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
   NSMutableDictionary *queryDictionary = AFKeychainQueryDictionaryWithIdentifier(identifier, accessGroup);
 
   if (!credential) {
-    return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud accessGroup:nil];
+    return [self deleteCredentialWithIdentifier:identifier useICloud:shouldUseICloud accessGroup:accessGroup];
   }
 
   NSMutableDictionary *updateDictionary = [NSMutableDictionary dictionary];
