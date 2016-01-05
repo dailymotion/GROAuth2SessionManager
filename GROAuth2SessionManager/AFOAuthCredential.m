@@ -151,7 +151,7 @@ static NSMutableDictionary *AFKeychainQueryDictionaryWithIdentifier(NSString *id
   }
 
   OSStatus status;
-  BOOL exists = ([self retrieveCredentialWithIdentifier:identifier accessGroup:nil] != nil);
+  BOOL exists = [self retrieveCredentialWithIdentifier:identifier accessGroup:accessGroup] != nil;
 
   if (exists) {
     status = SecItemUpdate((__bridge CFDictionaryRef) queryDictionary, (__bridge CFDictionaryRef) updateDictionary);
